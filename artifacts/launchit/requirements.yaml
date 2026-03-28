@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "For smooth chat bubble entry animations and page transitions"
+  "date-fns": "For formatting message timestamps easily"
+  "clsx": "For merging class names conditionally"
+  "tailwind-merge": "For merging tailwind classes safely"
+
+images:
+  - path: "artifacts/launchit/public/images/hero-abstract.png"
+    description: "Abstract soft gradient mesh background in warm amber, orange, and off-white colors, very subtle and clean, modern friendly aesthetic"
+    aspect_ratio: "16:9"
+  - path: "artifacts/launchit/public/images/avatar-assistant.png"
+    description: "A friendly, minimalist illustrated 3D avatar face of a helpful assistant, warm amber and cream colors, clean background"
+    aspect_ratio: "1:1"
+
+notes:
+  - Uses @workspace/api-client-react for all API calls
+  - Assumes global state for documents using React Context to share between Chat and Documents pages

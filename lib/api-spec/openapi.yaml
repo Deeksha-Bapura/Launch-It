@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: LaunchIt API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: chat
+    description: Conversational AI chat
+  - name: documents
+    description: Document generation
+  - name: compliance
+    description: Permit and compliance data
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /chat:
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a chat message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /documents/generate:
+    post:
+      operationId: generateDocument
+      tags: [documents]
+      summary: Generate a business document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+      responses:
+        "200":
+          description: Generated document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /compliance/deadlines:
+    get:
+      operationId: getComplianceDeadlines
+      tags: [compliance]
+      summary: Get upcoming compliance deadlines for a city
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Compliance deadlines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeadlinesResponse"
+        "404":
+          description: City not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /compliance/permits:
+    get:
+      operationId: getPermits
+      tags: [compliance]
+      summary: Get permit requirements for a city and business type
+      parameters:
+        - name: city
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: businessType
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Permit requirements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PermitsResponse"
+        "404":
+          description: City not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required:
+        - role
+        - content
+    ChatRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        sessionData:
+          type: object
+          additionalProperties: true
+      required:
+        - messages
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        detectedBusinessType:
+          type: string
+        suggestDocuments:
+          type: boolean
+      required:
+        - reply
+        - detectedBusinessType
+        - suggestDocuments
+    DocumentRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [invoice, profit_loss, pricing, social_post]
+        businessName:
+          type: string
+        ownerName:
+          type: string
+        city:
+          type: string
+        product:
+          type: string
+      required:
+        - type
+    DocumentResponse:
+      type: object
+      properties:
+        document:
+          type: object
+          additionalProperties: true
+      required:
+        - document
+    DeadlinesResponse:
+      type: object
+      properties:
+        city:
+          type: string
+        upcomingDeadlines:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              date:
+                type: string
+            required:
+              - label
+              - date
+        salesTaxRate:
+          type: number
+        generalLicenseRequired:
+          type: boolean
+      required:
+        - city
+        - upcomingDeadlines
+        - salesTaxRate
+        - generalLicenseRequired
+    PermitsResponse:
+      type: object
+      properties:
+        city:
+          type: string
+        businessType:
+          type: string
+        permits:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        disclaimer:
+          type: string
+      required:
+        - city
+        - businessType
+        - permits
+        - disclaimer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
