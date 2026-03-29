@@ -1,0 +1,16 @@
+{
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm -r --filter @workspace/db run build && pnpm --filter @workspace/launchit run build",
+  "outputDirectory": "artifacts/launchit/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://your-railway-backend-url.up.railway.app/api/:path*"
+    }
+  ],
+  "env": {
+    "BASE_PATH": "/",
+    "PORT": "3000"
+  }
+}
