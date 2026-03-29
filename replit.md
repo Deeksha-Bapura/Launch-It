@@ -15,6 +15,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Auth**: Passport.js (local strategy), bcrypt, express-session + connect-pg-simple
 
 ## Structure
 
@@ -56,13 +57,21 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, express-session (connect-pg-simple), passport.js (local strategy), routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health`; `src/routes/auth.ts` handles register/login/logout/me/PATCH me
-- Auth: Passport.js local strategy with bcrypt hashing, sessions in `session` DB table. All routes except `/api/healthz` and `/api/auth/*` are protected by `isAuthenticated` middleware
-- Depends on: `@workspace/db`, `@workspace/api-zod`, `passport`, `passport-local`, `express-session`, `connect-pg-simple`, `bcrypt`
+- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, express-session (connect-pg-simple), Passport.js (local strategy), routes at `/api`
+- Middlewares: `src/middlewares/isAuthenticated.ts` — Passport-based auth check
+- Routes:
+  - `src/routes/auth.ts` — register, login, logout, me (GET/PATCH), change-password, delete-user
+  - `src/routes/transactions.ts` — CRUD for income/expense transactions (auth-protected)
+  - `src/routes/conversations.ts` — CRUD for chat conversations (auth-protected)
+  - `src/routes/documents.ts` — generate + list documents (auth-protected)
+  - `src/routes/marketing.ts` — caption, platform-recommendation, content-calendar (auth-protected)
+  - `src/routes/compliance.ts` — permits and deadlines by city (auth-protected)
+  - `src/routes/chat.ts` — conversational AI chat (auth-protected)
+  - `src/routes/health.ts` — health check
+- Auth: Passport.js local strategy with bcrypt hashing, sessions stored in PostgreSQL `session` table (created manually with SQL; `createTableIfMissing: false`)
+- Depends on: `@workspace/db`, `@workspace/api-zod`, `passport`, `passport-local`, `express-session`, `connect-pg-simple`, `bcrypt`, `zod`
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.mjs`)
 
 ### `lib/db` (`@workspace/db`)
 
@@ -70,12 +79,37 @@ Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client insta
 
 - `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
 - `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas
-- Schema tables: `users`, `session` (connect-pg-simple), `conversations`, `documents`, `transactions`
+- `src/schema/users.ts` — users table (email, passwordHash, name, businessName, businessType, state, description, photoUrl, logoUrl, etc.)
+- `src/schema/transactions.ts` — income/expense transactions per user (date stored as ISO string)
+- `src/schema/conversations.ts` — chat conversation history per user (JSONB messages + sessionData, detectedBusinessType)
+- `src/schema/documents.ts` — generated documents per user (JSONB content)
+- `src/schema/sessions.ts` — connect-pg-simple session table (Drizzle reference only; table created manually via SQL)
 - `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
 - Exports: `.` (pool, db, schema), `./schema` (schema only)
 
 Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+
+### `artifacts/launchit` (`@workspace/launchit`)
+
+React + Vite frontend for the LaunchIt app.
+
+- **Auth**: `src/context/AuthContext.tsx` — login, register, logout, updateUser, refreshUser/refetchUser, isLoading; calls `/api/auth/*`
+- **Auth guard**: `src/components/ProtectedRoute.tsx` — redirects unauthenticated users to `/login` via `isLoading`/`user` from AuthContext
+- **Pages**:
+  - `/` — Home (public landing)
+  - `/login` — Combined Login/Register with mode toggle (public)
+  - `/signup` — Dedicated signup page (public)
+  - `/onboarding` — Onboarding flow (auth-protected)
+  - `/dashboard` — Business snapshot, quick actions, recent docs, upcoming deadlines (auth-protected)
+  - `/chat` — AI chat with collapsible conversation sidebar (auth-protected)
+  - `/documents` — Document list from DB with modal viewer (auth-protected)
+  - `/tracker` — Income/expense tracker with form + monthly list + summary (auth-protected)
+  - `/report` — Monthly report with Recharts bar + donut charts + PDF print (auth-protected)
+  - `/marketing` — Caption Generator, Platform Recommender, Content Calendar (auth-protected)
+  - `/compliance` — Permit checklist with localStorage persistence + deadline countdown (auth-protected)
+  - `/profile` — Editable business + personal info, logo upload (auth-protected)
+  - `/settings` — Notifications toggles, change-password, delete-account modal (auth-protected)
+- **NavBar**: Desktop nav links for all pages + AvatarDropdown (profile/settings/logout) when logged in; Sign In button for guests; mobile bottom tab bar for 5 key pages
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 
@@ -97,3 +131,13 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+## Database Tables
+
+All tables are in PostgreSQL managed by Drizzle ORM:
+
+- `users` — user accounts with business and personal info (photoUrl + logoUrl both supported)
+- `transactions` — income/expense records linked to users (date as ISO string)
+- `conversations` — chat conversation history with JSONB messages, sessionData, detectedBusinessType
+- `documents` — generated business documents with JSONB content
+- `session` — express-session storage (created manually with SQL; not managed by Drizzle push)

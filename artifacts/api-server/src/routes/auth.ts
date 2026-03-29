@@ -2,8 +2,9 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import passport from "passport";
 import bcrypt from "bcrypt";
 import { db } from "@workspace/db";
-import { usersTable, type User } from "@workspace/db/schema";
+import { usersTable, transactionsTable, conversationsTable, documentsTable, type User } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -12,13 +13,39 @@ function safeUser(user: User): Omit<User, "passwordHash"> {
   return rest;
 }
 
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  name: z.string().optional(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(6),
+});
+
+const updateProfileSchema = z.object({
+  name: z.string().optional(),
+  phone: z.string().optional(),
+  businessName: z.string().optional(),
+  businessType: z.string().optional(),
+  state: z.string().optional(),
+  businessDescription: z.string().optional(),
+  registrationStatus: z.string().optional(),
+  yearStarted: z.string().optional(),
+  description: z.string().optional(),
+  photoUrl: z.string().optional(),
+  logoUrl: z.string().optional(),
+});
+
 router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, name } = req.body as { email?: string; password?: string; name?: string };
-    if (!email || !password || !name) {
-      res.status(400).json({ error: "email, password, and name are required" });
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "email, password (min 6 chars), and name are required" });
       return;
     }
+    const { email, password, name } = parsed.data;
 
     const existing = await db
       .select()
@@ -33,7 +60,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
     const passwordHash = await bcrypt.hash(password, 12);
     const [user] = await db
       .insert(usersTable)
-      .values({ email: email.toLowerCase(), passwordHash, name })
+      .values({ email: email.toLowerCase(), passwordHash, name: name ?? "" })
       .returning();
 
     req.login(user, (err) => {
@@ -83,44 +110,71 @@ router.patch("/me", async (req: Request, res: Response, next: NextFunction) => {
     return;
   }
   try {
+    const parsed = updateProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid profile data" });
+      return;
+    }
+
     const userId = (req.user as User).id;
-    const {
-      businessName,
-      state,
-      businessDescription,
-      businessType,
-      registrationStatus,
-      yearStarted,
-      phone,
-      photoUrl,
-    } = req.body as {
-      businessName?: string;
-      state?: string;
-      businessDescription?: string;
-      businessType?: string;
-      registrationStatus?: string;
-      yearStarted?: string;
-      phone?: string;
-      photoUrl?: string;
-    };
-
-    const updates: Partial<Omit<User, "id" | "email" | "passwordHash" | "createdAt">> = {};
-    if (businessName !== undefined) updates.businessName = businessName;
-    if (state !== undefined) updates.state = state;
-    if (businessDescription !== undefined) updates.businessDescription = businessDescription;
-    if (businessType !== undefined) updates.businessType = businessType;
-    if (registrationStatus !== undefined) updates.registrationStatus = registrationStatus;
-    if (yearStarted !== undefined) updates.yearStarted = yearStarted;
-    if (phone !== undefined) updates.phone = phone;
-    if (photoUrl !== undefined) updates.photoUrl = photoUrl;
-
     const [updated] = await db
       .update(usersTable)
-      .set(updates)
+      .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(usersTable.id, userId))
       .returning();
 
     res.json({ user: safeUser(updated) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/change-password", async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid data. New password must be at least 6 characters." });
+      return;
+    }
+    const { currentPassword, newPassword } = parsed.data;
+    const userId = (req.user as User).id;
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(400).json({ error: "Current password is incorrect" });
+      return;
+    }
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await db.update(usersTable).set({ passwordHash: newHash, updatedAt: new Date() }).where(eq(usersTable.id, userId));
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/user", async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  try {
+    const userId = (req.user as User).id;
+    await db.delete(transactionsTable).where(eq(transactionsTable.userId, userId));
+    await db.delete(conversationsTable).where(eq(conversationsTable.userId, userId));
+    await db.delete(documentsTable).where(eq(documentsTable.userId, userId));
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+    req.logout((err) => {
+      if (err) return next(err);
+      res.json({ ok: true });
+    });
   } catch (err) {
     next(err);
   }

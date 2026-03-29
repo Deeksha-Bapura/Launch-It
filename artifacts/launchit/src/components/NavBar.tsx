@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Rocket, FileText, MessageSquare, LayoutDashboard, BarChart3, Megaphone, Shield, ChevronDown, LogOut, User, Settings } from "lucide-react";
+import { Rocket, FileText, MessageSquare, LayoutDashboard, BarChart3, Megaphone, CheckSquare, ChevronDown, LogOut, User, Settings, DollarSign } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useState, useRef, useEffect } from "react";
@@ -12,17 +12,17 @@ function cn(...inputs: ClassValue[]) {
 const NAV_LINKS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/tracker", label: "Tracker", icon: BarChart3 },
+  { href: "/tracker", label: "Tracker", icon: DollarSign },
   { href: "/report", label: "Report", icon: BarChart3 },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
-  { href: "/compliance", label: "Compliance", icon: Shield },
+  { href: "/compliance", label: "Compliance", icon: CheckSquare },
   { href: "/documents", label: "Documents", icon: FileText },
 ];
 
 const BOTTOM_TAB_LINKS = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/tracker", label: "Tracker", icon: BarChart3 },
+  { href: "/tracker", label: "Tracker", icon: DollarSign },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
   { href: "/documents", label: "Docs", icon: FileText },
 ];

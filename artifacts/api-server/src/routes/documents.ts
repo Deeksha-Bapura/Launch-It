@@ -6,10 +6,21 @@ import {
   generateSocialPost,
 } from "../services/documentTemplates.js";
 import { GenerateDocumentBody, GenerateDocumentResponse } from "@workspace/api-zod";
+import { db } from "@workspace/db";
+import { documentsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "../middlewares/requireAuth.js";
 
 const router: IRouter = Router();
 
-router.post("/generate", (req, res, next) => {
+const DOC_TITLES: Record<string, string> = {
+  invoice: "Invoice Template",
+  profit_loss: "Profit & Loss Tracker",
+  pricing: "Pricing Calculator",
+  social_post: "Social Media Post",
+};
+
+router.post("/generate", async (req, res, next) => {
   try {
     const parsed = GenerateDocumentBody.safeParse(req.body);
     if (!parsed.success) {
@@ -39,8 +50,31 @@ router.post("/generate", (req, res, next) => {
         return;
     }
 
+    if (req.session?.userId) {
+      await db.insert(documentsTable).values({
+        userId: req.session.userId,
+        type,
+        title: DOC_TITLES[type] ?? type,
+        content: document as any,
+      });
+    }
+
     const response = GenerateDocumentResponse.parse({ document });
     res.json(response);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/", requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.session!.userId!;
+    const rows = await db
+      .select()
+      .from(documentsTable)
+      .where(eq(documentsTable.userId, userId))
+      .orderBy(documentsTable.createdAt);
+    res.json({ documents: rows });
   } catch (err) {
     next(err);
   }

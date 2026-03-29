@@ -1,113 +1,111 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { Rocket, Eye, EyeOff } from "lucide-react";
+import { useLocation } from "wouter";
+import { Rocket } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-
-function getApiBase() {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  return `${base}/api`;
-}
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [, setLocation] = useLocation();
-  const { refetchUser } = useAuth();
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login, register } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const res = await fetch(`${getApiBase()}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Login failed");
-        return;
+      if (mode === "login") {
+        await login(email, password);
+      } else {
+        await register(email, password, name);
       }
-      await refetchUser();
       setLocation("/dashboard");
-    } catch {
-      setError("Unable to connect. Please try again.");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-            <div className="bg-primary/10 p-2 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-              <Rocket className="w-5 h-5" />
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="bg-primary/10 p-2 rounded-xl text-primary">
+              <Rocket className="w-6 h-6" />
             </div>
-            <span className="font-display font-bold text-xl text-foreground">LaunchIt</span>
-          </Link>
-          <h1 className="font-display text-3xl font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+            <span className="font-display font-bold text-2xl text-foreground">LaunchIt</span>
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {mode === "login" ? "Welcome back" : "Create your account"}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {mode === "login" ? "Sign in to your account" : "Start your business journey"}
+          </p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-border shadow-sm p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="bg-destructive/10 text-destructive text-sm px-4 py-3 rounded-xl font-medium">
-                {error}
+        <div className="bg-white border border-border rounded-2xl p-8 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "register" && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
               </div>
             )}
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">Email address</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                required
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-12 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-foreground mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
             </div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all active:translate-y-0 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+              disabled={loading}
+              className="w-full bg-primary text-white font-bold py-2.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-primary font-semibold hover:underline">
-              Sign up free
-            </Link>
-          </p>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-muted-foreground">
+              {mode === "login" ? "Don't have an account? " : "Already have an account? "}
+            </span>
+            <button
+              onClick={() => setMode(mode === "login" ? "register" : "login")}
+              className="font-semibold text-primary hover:underline"
+            >
+              {mode === "login" ? "Sign up" : "Sign in"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

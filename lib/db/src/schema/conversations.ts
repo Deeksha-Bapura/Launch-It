@@ -6,7 +6,9 @@ import { z } from "zod/v4";
 export const conversationsTable = pgTable("conversations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default("New Conversation"),
   messages: jsonb("messages").notNull().default([]),
+  sessionData: jsonb("session_data").notNull().default({}),
   detectedBusinessType: text("detected_business_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

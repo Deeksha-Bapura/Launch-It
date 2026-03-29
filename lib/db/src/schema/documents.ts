@@ -6,7 +6,7 @@ import { z } from "zod/v4";
 export const documentsTable = pgTable("documents", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
+  type: text("type").notNull(), // "invoice" | "profit_loss" | "pricing" | "social_post"
   title: text("title").notNull(),
   content: jsonb("content").notNull().default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),

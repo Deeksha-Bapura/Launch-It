@@ -7,11 +7,11 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Home from "@/pages/Home";
-import Chat from "@/pages/Chat";
-import Documents from "@/pages/Documents";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import Onboarding from "@/pages/Onboarding";
+import Chat from "@/pages/Chat";
+import Documents from "@/pages/Documents";
 import Dashboard from "@/pages/Dashboard";
 import Tracker from "@/pages/Tracker";
 import Report from "@/pages/Report";
