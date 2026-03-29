@@ -1,0 +1,378 @@
+You are building out a production-ready version of LaunchIt, a business guidance platform for informal economy workers. The codebase is a pnpm monorepo with an Express backend (artifacts/api-server) and a React+Vite frontend (artifacts/launchit). PostgreSQL is already connected via Drizzle ORM. Here is everything that needs to be built. Do not touch claudeService.ts — leave the mock chat function exactly as it is.
+
+---
+
+1. AUTHENTICATION & USER ACCOUNTS
+
+Add full auth using Passport.js with local strategy (email + password). Also add Google OAuth as a second option.
+
+- Add a users table to the Drizzle schema with: id, email, password hash, name, business name, city, created_at
+- Add a sessions table for persistent login sessions using express-session with connect-pg-simple
+- Backend routes needed: POST /api/auth/register, POST /api/auth/login, POST /api/auth/logout, GET /api/auth/me
+- Passwords must be hashed with bcrypt
+- Frontend needs three new pages: /signup, /login, and redirect logic after auth
+- After signup, ask for name, business name, and city (Houston or Austin) in a simple onboarding step before going to the dashboard
+- Protect all routes except /, /login, /signup behind auth middleware
+- Show a persistent nav with the user's name and a logout button when logged in
+
+---
+
+2. DASHBOARD PAGE
+
+Add a /dashboard page as the logged-in home. It should have four sections:
+
+- Business snapshot: shows their business name, city, detected business type, and days since they started using LaunchIt
+- Quick actions: four big buttons — Start a Chat, Generate a Document, Log Income, View Compliance Checklist
+- Recent documents: list of the last 3 documents they generated with a link to view each
+- Upcoming deadlines: pull from the existing /api/compliance/deadlines endpoint using their saved city
+
+---
+
+3. PERSIST CHAT HISTORY
+
+Add a conversations table with: id, user_id, messages (JSONB), detected_business_type, created_at, updated_at.
+
+- Save every chat conversation to the database linked to the logged-in user
+- Add GET /api/conversations to list past conversations
+- Add GET /api/conversations/:id to load a specific one
+- Add POST /api/conversations to create a new one
+- On the Chat page, show a sidebar (collapsible on mobile) with past conversations so users can resume them
+- When a conversation detects a business type, save it back to the user profile
+
+---
+
+4. INCOME & EXPENSE LOGGER
+
+Add a /tracker page and the following:
+
+Database: add a transactions table with: id, user_id, type (income/expense), amount, description, category, date, created_at.
+
+Categories for income: services, products, tips, other.
+Categories for expenses: supplies, transport, equipment, marketing, fees, other.
+
+Backend routes:
+- POST /api/transactions — create a transaction
+- GET /api/transactions — list all for the logged-in user, filterable by month/type
+- DELETE /api/transactions/:id — delete one
+
+Frontend tracker page:
+- A simple form at the top: amount, type toggle (income/expense), description, category dropdown, date
+- A running list of all transactions below grouped by month
+- Show a summary bar at the top: total income this month, total expenses this month, net profit this month
+- Color code: green for income, red for expense
+
+---
+
+5. MONTHLY BUSINESS REPORT PAGE
+
+Add a /report page.
+
+Backend: add GET /api/report?month=YYYY-MM that queries the transactions table and returns:
+- Total income, total expenses, net profit
+- Transaction count
+- Top 3 expense categories
+- Top income days of the week based on transaction dates
+- A simple month-over-month comparison if prior month data exists
+
+Frontend report page:
+- Show the numbers in clean stat cards
+- A simple bar chart using Recharts showing income vs expenses by week
+- A breakdown donut chart of expense categories using Recharts
+- A Download as PDF button using window.print() with a print stylesheet
+
+---
+
+6. MARKETING ENGINE PAGE
+
+Add a /marketing page with three tools as tabs:
+
+Tab 1 — Caption Generator
+- File upload input that accepts an image (jpg/png)
+- A dropdown for business type (food, beauty, cleaning, landscaping, other)
+- A text input for a one-line description of the image
+- On submit, call POST /api/marketing/caption which calls the existing chat service with a prompt asking for 3 Instagram caption options and 15 relevant hashtags based on the business type and description. Return all three captions as an array.
+- Display the three captions as copyable cards with a Copy button on each
+
+Tab 2 — Platform Recommender
+- Three questions: What type of business? (dropdown), Who are your customers? (age range slider 18-65+), Is your work visual? (yes/no toggle)
+- On submit, call POST /api/marketing/platform-recommendation which uses the chat service to return a recommendation of 2 platforms with a plain-English reason for each
+- Display as two clean cards with platform name, icon using lucide icons, and the reason
+
+Tab 3 — Content Calendar
+- One input: what is your business? pre-filled from their profile
+- On submit, call POST /api/marketing/content-calendar which returns 7 days of content prompts as structured JSON: day name, content type (photo/reel/story/carousel), prompt text, best posting time
+- Display as a 7-card weekly calendar view
+
+---
+
+7. COMPLIANCE CHECKLIST PAGE
+
+Add a /compliance page.
+
+Backend: the routes already exist at GET /api/compliance/permits and GET /api/compliance/deadlines. Just need the frontend.
+
+- On load, fetch permits using the user's saved city and detected business type
+- Render each permit as a checklist item with: permit name, required status color coded, cost, a link to the official page, and a checkbox the user can tick off
+- Store the checked state in localStorage keyed to the user id
+- Show the deadlines section below with a countdown in days to the next due date
+- Add a disclaimer banner at the bottom matching what the API already returns
+
+---
+
+8. DOCUMENTS PAGE UPGRADE
+
+The documents page exists but needs upgrading:
+
+- Add a documents table: id, user_id, type, title, content (JSONB), created_at
+- Save every generated document to the database linked to the user
+- GET /api/documents — list all documents for the user
+- The documents page should show all past documents as cards with: type icon, title, date generated, and a View button
+- Clicking View opens a modal showing the document content rendered cleanly
+- Add a Download as PDF button on the modal using window.print()
+
+---
+
+9. NAVIGATION & LAYOUT
+
+Update the global nav to have these links when logged in: Dashboard, Chat, Tracker, Report, Marketing, Compliance, Documents
+
+On mobile this should be a bottom tab bar with icons for the 5 most important pages: Dashboard, Chat, Tracker, Marketing, Documents.
+
+Add a user avatar with initials in the top right that opens a dropdown with: Profile, Settings (placeholder page), Logout.
+
+---
+
+10. ONBOARDING FLOW
+
+After a new user signs up, show a 3-step onboarding before redirecting to dashboard:
+
+- Step 1: What's your business called? (text input) + What city are you in? (Houston / Austin toggle)
+- Step 2: What do you do? (short description text area, max 200 chars)
+- Step 3: A welcome screen showing their name, their city, and a Let's go button that takes them to Chat
+
+Save all of this to the users table.
+
+---
+
+GENERAL REQUIREMENTS
+
+- All pages must be mobile responsive
+- Use the existing Tailwind + shadcn/ui component library already in the project
+- All API routes must check authentication and return 401 if not logged in
+- Use React Query for all data fetching on the frontend, consistent with the existing pattern
+- Add proper loading states and error states to every page
+- Do not modify claudeService.ts at all — leave it exactly as it is
+- Do not change the existing landing page (Home.tsx) or the existing Chat.tsx structure — only extend them
+- Make sure the app runs and deploys cleanly on Replit with no build errors
+
+
+
+I need you to build out the Profile and Settings pages for LaunchIt. 
+Both pages are currently empty. Here's exactly what I need:
+
+---
+
+## 1. PROFILE PAGE (client/src/pages/Profile.tsx)
+
+### Business Identity Section
+- Editable fields: Business name, Business type (dropdown: Food/Baking, 
+  Cleaning, Nails/Beauty, Repairs/Handyman, Other), City/Location
+- Business status badge with 3 options the user can select:
+  ✅ Officially Registered, 🟡 In Progress, 🔴 Not Started
+- Editable fields: Year started, Short business description (textarea)
+- Profile photo / business logo upload (image preview shown after upload)
+
+### Personal Info Section
+- Editable fields: Full name, Email, Phone number
+- A "Save Changes" button that saves everything and shows a success toast
+
+### Wiring
+- Pre-populate fields from the existing AppContext (businessType, city, 
+  user name, email)
+- On save, update AppContext so the AI Chat still gets the right context
+
+---
+
+## 2. SETTINGS PAGE (client/src/pages/Settings.tsx)
+
+### Business Preferences Section
+- Default city (text input)
+- Business type (same dropdown as Profile)
+- Note: these should stay in sync with Profile fields
+
+### Notifications Section
+- Toggle: "Weekly business tip emails" (on/off)
+- Toggle: "Deadline alerts" (on/off)
+- Save these preferences (localStorage is fine)
+
+### Account & Security Section
+- "Change Password" — show a small inline form with: 
+  Current password, New password, Confirm new password + Submit button
+- "Delete Account" — a button that opens a confirmation modal saying 
+  "Are you sure? This cannot be undone." with Cancel and Delete buttons
+  (wire Delete to call DELETE /api/auth/user or show a toast if not 
+  yet implemented)
+
+---
+
+## 3. ROUTING
+- Make sure Profile and Settings are reachable from the top-right 
+  dropdown menu (the one with Profile / Settings / Logout links). 
+  They should already route to /profile and /settings — just confirm 
+  the routes exist in App.tsx and are protected routes.
+
+---
+
+## STYLE NOTES
+- Match the existing LaunchIt design system (cream background, 
+  orange #F97316 accents, dark navy text, rounded cards, same font)
+- Use the same card/section style as Dashboard.tsx
+- Mobile-friendly layout
+
+Please implement all of this now.
+
+In the onboarding/signup flow, the location field currently only has 
+Houston and Austin as options. I need to replace it with a proper 
+US state selector. Here's what I want:
+
+1. Find wherever the city/location dropdown is defined in the signup 
+   or onboarding flow (likely in a component like Onboarding.tsx, 
+   Signup.tsx, or a step component)
+
+2. Replace the current limited options with a full dropdown of all 
+   50 US states, using standard state names:
+   Alabama, Alaska, Arizona, Arkansas, California, Colorado, 
+   Connecticut, Delaware, Florida, Georgia, Hawaii, Idaho, Illinois, 
+   Indiana, Iowa, Kansas, Kentucky, Louisiana, Maine, Maryland, 
+   Massachusetts, Michigan, Minnesota, Mississippi, Missouri, Montana, 
+   Nebraska, Nevada, New Hampshire, New Jersey, New Mexico, New York, 
+   North Carolina, North Dakota, Ohio, Oklahoma, Oregon, Pennsylvania, 
+   Rhode Island, South Carolina, South Dakota, Tennessee, Texas, Utah, 
+   Vermont, Virginia, Washington, West Virginia, Wisconsin, Wyoming
+
+3. The dropdown should have a default placeholder like 
+   "Select your state..."
+
+4. Make sure the selected state is saved to the user's profile/context 
+   the same way the old city value was — so the AI Chat and 
+   permit recommendations still use it correctly.
+
+5. Also update the same location field in the Profile page 
+   (if it exists) to use this same full state dropdown for consistency.
+
+Please find all places in the codebase where the city/location 
+options are defined and update all of them.
+
+In the Settings page, the "Change Password" and "Delete Account" 
+buttons currently show a "Coming Soon" message. I need both of 
+these to actually work. Here's what I want:
+
+---
+
+## 1. CHANGE PASSWORD
+
+### Frontend (Settings.tsx)
+- Show an inline form when "Change Password" is clicked with:
+  - Current Password field
+  - New Password field  
+  - Confirm New Password field
+  - Submit button + Cancel button
+- Validate on the frontend:
+  - New password must be at least 8 characters
+  - New password and confirm password must match
+  - Show clear error messages if validation fails
+- On success, show a green toast: "Password updated successfully"
+- On error (wrong current password), show a red toast: 
+  "Current password is incorrect"
+
+### Backend
+- Create a new API route: PATCH /api/auth/change-password
+- It should:
+  - Require the user to be logged in (use existing auth middleware)
+  - Accept body: { currentPassword, newPassword }
+  - Verify currentPassword matches the stored hashed password
+  - Hash the new password with bcrypt
+  - Update the password in the database
+  - Return 200 on success, 400 if current password is wrong
+
+---
+
+## 2. DELETE ACCOUNT
+
+### Frontend (Settings.tsx)
+- When "Delete Account" is clicked, show a confirmation modal with:
+  - Warning message: "This will permanently delete your account 
+    and all your data. This cannot be undone."
+  - A text input where user must type "DELETE" to confirm
+  - A red "Delete My Account" button (only enabled when they 
+    typed DELETE correctly)
+  - A Cancel button
+- On success, log the user out and redirect to the home/landing page
+- Show a toast: "Your account has been deleted"
+
+### Backend
+- Create a new API route: DELETE /api/auth/user
+- It should:
+  - Require the user to be logged in (use existing auth middleware)
+  - Delete the user's data from all related tables first 
+    (conversations, documents, transactions, etc.)
+  - Then delete the user record itself
+  - Destroy the session
+  - Return 200 on success
+
+---
+
+## STYLE NOTES
+- Match existing LaunchIt design (orange accents, rounded inputs, 
+  cream background)
+- The confirmation modal for Delete Account should have a red 
+  destructive style to signal danger
+- Both forms should be mobile friendly
+
+Please implement both the frontend and backend for both features now.
+
+I need two small text/UI changes on the homepage (Landing page):
+
+1. Find the banner/pill that says "Now live in Houston & Austin, TX" 
+   and change the text to "Now live all over the US"
+
+2. Find the row of badge/pill buttons below the "Start Conversation" 
+   button that shows "100% free", "No jargon", and "Houston & Austin, TX"
+   — remove only the "Houston & Austin, TX" pill/badge completely. 
+   Keep "100% free" and "No jargon" as they are.
+
+Please find these in the landing page component (likely Landing.tsx 
+or Home.tsx) and make both changes now.
+
+In the Settings page, remove the entire "Business Preferences" 
+section — this includes the "Default City" field, the "Business 
+Type" dropdown, and the "Save Preferences" button. 
+
+Remove the whole card/section block for Business Preferences 
+from Settings.tsx. Leave all other sections (Notifications, 
+Account & Security, etc.) untouched.
+
+In the footer or disclaimer text, find the line that says:
+"LaunchIt provides guidance, not legal or accounting advice. 
+Currently scoped to Houston and Austin, TX only. Always verify 
+requirements with your local agency."
+
+Remove only the sentence "Currently scoped to Houston and Austin, 
+TX only." and keep the rest so it reads:
+"LaunchIt provides guidance, not legal or accounting advice. 
+Always verify requirements with your local agency."
+
+Search the entire codebase for this text as it may appear in 
+a Footer.tsx, Landing.tsx, or Layout.tsx file.
+
+On the landing/home page, find the "Chat" button that appears 
+next to the "Sign In" button in the navigation or hero section 
+and remove it completely. 
+
+Keep the "Sign In" button as it is. Only remove the Chat button.
+
+Search in Landing.tsx or the navbar/header component for this 
+button and delete it.
+
+
+
