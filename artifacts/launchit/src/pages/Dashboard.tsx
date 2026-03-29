@@ -145,7 +145,9 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3">
                 {upcomingDeadlines.map((d: any, i: number) => {
-                  const daysLeft = differenceInDays(parseISO(d.date), new Date());
+                  const parsed = parseISO(d.date);
+                  const isValid = !isNaN(parsed.getTime());
+                  const daysLeft = isValid ? differenceInDays(parsed, new Date()) : 0;
                   return (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-border">
                       <div className={`p-2 rounded-lg ${daysLeft < 7 ? "bg-red-100" : "bg-amber-100"}`}>
@@ -154,7 +156,7 @@ export default function Dashboard() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-foreground">{d.label}</p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(d.date), "MMM d, yyyy")} · {daysLeft > 0 ? `${daysLeft} days left` : "Today"}
+                          {isValid ? format(parsed, "MMM d, yyyy") : d.date} · {daysLeft > 0 ? `${daysLeft} days left` : "Today"}
                         </p>
                       </div>
                     </div>

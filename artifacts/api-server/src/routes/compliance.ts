@@ -16,10 +16,15 @@ router.get("/deadlines", (req, res, next) => {
       return;
     }
 
-    const upcomingDeadlines = cityData.salesTax.dueDates.map((date: string) => ({
-      label: `Texas Sales Tax Filing Due`,
-      date,
-    }));
+    const now = new Date();
+    const upcomingDeadlines = cityData.salesTax.dueDates.map((dateStr: string) => {
+      // dateStr is like "April 20" — parse it and assign the nearest upcoming year
+      const parsed = new Date(`${dateStr}, ${now.getFullYear()}`);
+      if (isNaN(parsed.getTime())) return { label: "Texas Sales Tax Filing Due", date: dateStr };
+      if (parsed < now) parsed.setFullYear(now.getFullYear() + 1);
+      const iso = parsed.toISOString().split("T")[0];
+      return { label: "Texas Sales Tax Filing Due", date: iso };
+    });
 
     const response = GetComplianceDeadlinesResponse.parse({
       city,
