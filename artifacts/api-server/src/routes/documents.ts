@@ -10,6 +10,8 @@ import { db } from "@workspace/db";
 import { documentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth.js";
+import { chat } from "../services/claudeService.js";
+import type { User } from "@workspace/db/schema";
 
 const router: IRouter = Router();
 
@@ -50,9 +52,9 @@ router.post("/generate", async (req, res, next) => {
         return;
     }
 
-    if (req.session?.userId) {
+    if (req.isAuthenticated() && req.user) {
       await db.insert(documentsTable).values({
-        userId: req.session.userId,
+        userId: (req.user as User).id,
         type,
         title: DOC_TITLES[type] ?? type,
         content: document as any,
@@ -66,9 +68,54 @@ router.post("/generate", async (req, res, next) => {
   }
 });
 
+router.post("/pricing-analysis", requireAuth, async (req, res, next) => {
+  try {
+    const { businessType, city, service } = req.body as { businessType?: string; city?: string; service?: string };
+
+    const serviceLabel = service || businessType || "this service";
+    const cityLabel = city || "this area";
+
+    const prompt = `You are a pricing research expert. A small business owner does "${serviceLabel}" in ${cityLabel}.
+
+Research realistic market pricing for this specific service in this area and give them a pricing breakdown with:
+- The LOW end (entry-level, newer providers)
+- The AVERAGE (what most established providers charge)
+- The HIGH end (premium/experienced providers)
+
+Format your response EXACTLY as JSON like this (no markdown, just raw JSON):
+{
+  "service": "the service name",
+  "location": "the city/area",
+  "low": 45,
+  "average": 75,
+  "high": 120,
+  "unit": "per session",
+  "currency": "USD",
+  "insights": "2-3 sentences explaining what drives pricing in this market and what factors let someone charge at the high end"
+}
+
+Only return the JSON object, nothing else.`;
+
+    const raw = await chat([{ role: "user", content: prompt }]);
+
+    let analysis: Record<string, unknown>;
+    try {
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
+    } catch {
+      res.status(500).json({ error: "Failed to parse pricing analysis" });
+      return;
+    }
+
+    res.json({ analysis });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/", requireAuth, async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const rows = await db
       .select()
       .from(documentsTable)

@@ -14,7 +14,7 @@ const PLATFORM_ICONS: Record<string, any> = {
   linkedin: Linkedin,
 };
 
-function CaptionTab({ businessType }: { businessType: string }) {
+function CaptionTab({ businessType, location }: { businessType: string; location: string }) {
   const { toast } = useToast();
   const [description, setDescription] = useState("");
   const [bt, setBt] = useState(businessType || "");
@@ -28,7 +28,7 @@ function CaptionTab({ businessType }: { businessType: string }) {
       const res = await fetch(`${BASE}/marketing/caption`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessType: bt || "small business", description }),
+        body: JSON.stringify({ businessType: bt || "small business", description, location }),
         credentials: "include",
       });
       const data = await res.json();
@@ -104,7 +104,7 @@ function CaptionTab({ businessType }: { businessType: string }) {
   );
 }
 
-function PlatformTab({ businessType }: { businessType: string }) {
+function PlatformTab({ businessType, location }: { businessType: string; location: string }) {
   const { toast } = useToast();
   const [bt, setBt] = useState(businessType || "");
   const [audience, setAudience] = useState("");
@@ -118,7 +118,7 @@ function PlatformTab({ businessType }: { businessType: string }) {
       const res = await fetch(`${BASE}/marketing/platform-recommendation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessType: bt || "small business", targetAudience: audience, contentGoal: goal }),
+        body: JSON.stringify({ businessType: bt || "small business", targetAudience: audience, contentGoal: goal, location }),
         credentials: "include",
       });
       const data = await res.json();
@@ -201,7 +201,7 @@ function PlatformTab({ businessType }: { businessType: string }) {
   );
 }
 
-function CalendarTab({ businessType, businessName }: { businessType: string; businessName: string }) {
+function CalendarTab({ businessType, businessName, location }: { businessType: string; businessName: string; location: string }) {
   const { toast } = useToast();
   const [bt, setBt] = useState(businessType || "");
   const [bn, setBn] = useState(businessName || "");
@@ -215,7 +215,7 @@ function CalendarTab({ businessType, businessName }: { businessType: string; bus
       const res = await fetch(`${BASE}/marketing/content-calendar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessType: bt || "small business", businessName: bn, focus }),
+        body: JSON.stringify({ businessType: bt || "small business", businessName: bn, focus, location }),
         credentials: "include",
       });
       const data = await res.json();
@@ -303,6 +303,7 @@ function CalendarTab({ businessType, businessName }: { businessType: string; bus
 export default function Marketing() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"caption" | "platform" | "calendar">("caption");
+  const location = user?.state ?? "";
 
   const tabs = [
     { id: "caption" as const, label: "Caption Generator" },
@@ -332,9 +333,9 @@ export default function Marketing() {
           ))}
         </div>
 
-        {tab === "caption" && <CaptionTab businessType={user?.businessType ?? ""} />}
-        {tab === "platform" && <PlatformTab businessType={user?.businessType ?? ""} />}
-        {tab === "calendar" && <CalendarTab businessType={user?.businessType ?? ""} businessName={user?.businessName ?? ""} />}
+        {tab === "caption" && <CaptionTab businessType={user?.businessType ?? ""} location={location} />}
+        {tab === "platform" && <PlatformTab businessType={user?.businessType ?? ""} location={location} />}
+        {tab === "calendar" && <CalendarTab businessType={user?.businessType ?? ""} businessName={user?.businessName ?? ""} location={location} />}
       </div>
     </Layout>
   );

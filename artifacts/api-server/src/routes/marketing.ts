@@ -11,18 +11,21 @@ const captionSchema = z.object({
   businessType: z.string(),
   description: z.string(),
   imageContext: z.string().optional(),
+  location: z.string().optional(),
 });
 
 const platformSchema = z.object({
   businessType: z.string(),
   targetAudience: z.string(),
   contentGoal: z.string(),
+  location: z.string().optional(),
 });
 
 const calendarSchema = z.object({
   businessType: z.string(),
   businessName: z.string().optional(),
   focus: z.string().optional(),
+  location: z.string().optional(),
 });
 
 router.post("/caption", async (req, res, next) => {
@@ -32,8 +35,9 @@ router.post("/caption", async (req, res, next) => {
       res.status(400).json({ error: "Invalid data" });
       return;
     }
-    const { businessType, description, imageContext } = parsed.data;
-    const prompt = `You are a social media copywriter. Generate exactly 3 Instagram captions for a ${businessType} business. Post context: "${description}"${imageContext ? `. Image shows: ${imageContext}` : ""}. 
+    const { businessType, description, imageContext, location } = parsed.data;
+    const locationCtx = location ? ` based in ${location}` : "";
+    const prompt = `You are a social media copywriter. Generate exactly 3 Instagram captions for a ${businessType} business${locationCtx}. Post context: "${description}"${imageContext ? `. Image shows: ${imageContext}` : ""}.
 
 Return a JSON object with this exact structure:
 {
@@ -70,8 +74,9 @@ router.post("/platform-recommendation", async (req, res, next) => {
       res.status(400).json({ error: "Invalid data" });
       return;
     }
-    const { businessType, targetAudience, contentGoal } = parsed.data;
-    const prompt = `You are a digital marketing expert. Recommend the best 2 social media platforms for a ${businessType} business whose target audience is "${targetAudience}" and whose main content goal is "${contentGoal}".
+    const { businessType, targetAudience, contentGoal, location } = parsed.data;
+    const locationCtx = location ? ` based in ${location}` : "";
+    const prompt = `You are a digital marketing expert. Recommend the best 2 social media platforms for a ${businessType} business${locationCtx} whose target audience is "${targetAudience}" and whose main content goal is "${contentGoal}".
 
 Return a JSON object with this exact structure:
 {
@@ -108,8 +113,9 @@ router.post("/content-calendar", async (req, res, next) => {
       res.status(400).json({ error: "Invalid data" });
       return;
     }
-    const { businessType, businessName, focus } = parsed.data;
-    const prompt = `You are a content strategist. Create a 7-day social media content calendar for a ${businessType} business${businessName ? ` called "${businessName}"` : ""}${focus ? ` with a focus on: ${focus}` : ""}.
+    const { businessType, businessName, focus, location } = parsed.data;
+    const locationCtx = location ? ` based in ${location}` : "";
+    const prompt = `You are a content strategist. Create a 7-day social media content calendar for a ${businessType} business${locationCtx}${businessName ? ` called "${businessName}"` : ""}${focus ? ` with a focus on: ${focus}` : ""}.
 
 Return a JSON object with this exact structure:
 {

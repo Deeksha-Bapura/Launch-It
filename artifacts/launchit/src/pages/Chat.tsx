@@ -6,6 +6,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { InputBar } from "@/components/InputBar";
 import { useAppContext } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
+import type { AuthUser } from "@/context/AuthContext";
 import { useSendMessage, useGenerateDocument } from "@workspace/api-client-react";
 import { FileText, Calculator, BarChart3, Share2, Loader2, MessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +31,7 @@ export default function Chat() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -143,13 +144,26 @@ export default function Chat() {
         if (currentStep < 2) setCurrentStep(2);
 
         if (user && response.detectedBusinessType !== "general") {
+          const profileUpdate: Partial<AuthUser> = { businessType: response.detectedBusinessType };
+          if (response.detectedState && !user.state) {
+            profileUpdate.state = response.detectedState;
+          }
           await fetch(`${BASE}/auth/me`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ businessType: response.detectedBusinessType }),
+            body: JSON.stringify(profileUpdate),
             credentials: "include",
           });
+          updateUser(profileUpdate);
         }
+      } else if (response.detectedState && user && !user.state) {
+        await fetch(`${BASE}/auth/me`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state: response.detectedState }),
+          credentials: "include",
+        });
+        updateUser({ state: response.detectedState });
       }
 
       if (response.suggestDocuments) {
@@ -169,6 +183,56 @@ export default function Chat() {
   };
 
   const handleGenerateDoc = async (type: "invoice" | "profit_loss" | "pricing" | "social_post") => {
+    // P&L Tracker → go straight to the Tracker page
+    if (type === "profit_loss") {
+      setLocation("/tracker");
+      return;
+    }
+
+    // Pricing Calculator → run a live pricing analysis and show it inline in chat
+    if (type === "pricing") {
+      try {
+        const thinkingMsg = { role: "assistant" as const, content: "__pricing_loading__" };
+        setMessages((prev) => [...prev, thinkingMsg]);
+
+        const res = await fetch("/api/documents/pricing-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            businessType: sessionData.detectedBusinessType,
+            city: sessionData.city,
+            service: sessionData.detectedBusinessType,
+          }),
+        });
+        const data = await res.json();
+        const a = data.analysis;
+
+        const analysisMsg = `Here's a pricing breakdown for **${a.service}** in **${a.location}**:
+
+| Level | Price |
+|-------|-------|
+| 🟢 Low (entry-level) | $${a.low} ${a.unit} |
+| 🟡 Average (established) | $${a.average} ${a.unit} |
+| 🔴 High (premium) | $${a.high} ${a.unit} |
+
+${a.insights}
+
+Use this as your starting point — where you land depends on your experience, reviews, and how you present yourself.`;
+
+        setMessages((prev) => [
+          ...prev.filter((m) => m.content !== "__pricing_loading__"),
+          { role: "assistant", content: analysisMsg },
+        ]);
+        setCurrentStep(4);
+      } catch {
+        setMessages((prev) => prev.filter((m) => m.content !== "__pricing_loading__"));
+        toast({ title: "Error fetching pricing data", description: "Please try again.", variant: "destructive" });
+      }
+      return;
+    }
+
+    // Invoice Template & Social Post → generate doc and go to Documents
     try {
       const response = await generateDocMutation.mutateAsync({
         data: {
@@ -189,7 +253,8 @@ export default function Chat() {
     }
   };
 
-  const isGenerating = generateDocMutation.isPending;
+  const isPricingLoading = messages.some((m) => m.content === "__pricing_loading__");
+  const isGenerating = generateDocMutation.isPending || isPricingLoading;
 
   return (
     <Layout>
@@ -300,15 +365,15 @@ export default function Chat() {
                       <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600"><BarChart3 className="w-5 h-5" /></div>
                       <div>
                         <div className="font-bold text-foreground">P&L Tracker</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">Track your money</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Log income & expenses</div>
                       </div>
                     </button>
                     <button onClick={() => handleGenerateDoc("pricing")} disabled={isGenerating}
                       className="flex items-center gap-3 p-4 rounded-2xl border-2 border-border hover:border-blue-500/50 hover:bg-blue-50 text-left transition-all active:scale-95 disabled:opacity-50">
                       <div className="bg-blue-100 p-2 rounded-xl text-blue-600"><Calculator className="w-5 h-5" /></div>
                       <div>
-                        <div className="font-bold text-foreground">Pricing Calculator</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">Know what to charge</div>
+                        <div className="font-bold text-foreground">Pricing Analysis</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">See low / avg / high rates in your area</div>
                       </div>
                     </button>
                     <button onClick={() => handleGenerateDoc("social_post")} disabled={isGenerating}

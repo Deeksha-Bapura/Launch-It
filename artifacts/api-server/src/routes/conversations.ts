@@ -4,6 +4,7 @@ import { conversationsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { z } from "zod";
+import type { User } from "@workspace/db/schema";
 
 const router: IRouter = Router();
 
@@ -23,7 +24,7 @@ const updateConversationSchema = z.object({
 
 router.get("/", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const rows = await db
       .select()
       .from(conversationsTable)
@@ -37,7 +38,7 @@ router.get("/", async (req, res, next) => {
 
 router.get("/:id", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const id = Number(req.params.id);
     const [row] = await db
       .select()
@@ -56,7 +57,7 @@ router.get("/:id", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const parsed = createConversationSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid data" });
@@ -80,7 +81,7 @@ router.post("/", async (req, res, next) => {
 
 router.patch("/:id", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const id = Number(req.params.id);
     const parsed = updateConversationSchema.safeParse(req.body);
     if (!parsed.success) {

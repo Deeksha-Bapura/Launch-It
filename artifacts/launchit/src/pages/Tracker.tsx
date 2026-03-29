@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "@/components/Layout";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, TrendingUp, TrendingDown, DollarSign, Plus } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -20,7 +21,10 @@ const INCOME_CATEGORIES = ["Sales", "Service", "Consulting", "Tip", "Other"];
 const EXPENSE_CATEGORIES = ["Supplies", "Food", "Transport", "Marketing", "Equipment", "Rent", "Utilities", "Other"];
 
 function fetchTransactions() {
-  return fetch(`${BASE}/transactions`, { credentials: "include" }).then((r) => r.json());
+  return fetch(`${BASE}/transactions`, { credentials: "include" }).then((r) => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  });
 }
 
 export default function Tracker() {
@@ -32,7 +36,8 @@ export default function Tracker() {
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
 
-  const { data, isLoading } = useQuery({ queryKey: ["transactions"], queryFn: fetchTransactions });
+  const { user } = useAuth();
+  const { data, isLoading } = useQuery({ queryKey: ["transactions"], queryFn: fetchTransactions, enabled: !!user });
   const transactions: Transaction[] = data?.transactions ?? [];
 
   const addMutation = useMutation({
@@ -42,7 +47,13 @@ export default function Tracker() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
         credentials: "include",
-      }).then((r) => r.json()),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${r.status}`);
+        }
+        return r.json();
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       setAmount("");
@@ -50,7 +61,8 @@ export default function Tracker() {
       setCategory("");
       toast({ title: "Transaction added!" });
     },
-    onError: () => toast({ title: "Error", description: "Could not save transaction.", variant: "destructive" }),
+    onError: (err: Error) =>
+      toast({ title: "Error saving transaction", description: err.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({

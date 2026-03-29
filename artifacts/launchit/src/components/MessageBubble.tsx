@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Loader2 } from "lucide-react";
 import type { ChatMessageRole } from "@workspace/api-client-react";
 
 function cn(...inputs: ClassValue[]) {
@@ -11,6 +12,73 @@ function cn(...inputs: ClassValue[]) {
 interface MessageBubbleProps {
   role: ChatMessageRole;
   content: string;
+}
+
+function renderInline(text: string) {
+  return text.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+function renderContent(content: string) {
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Detect markdown table (lines with |)
+    if (line.trim().startsWith("|") && lines[i + 1]?.trim().startsWith("|---")) {
+      const headerCells = line.trim().slice(1, -1).split("|").map((c) => c.trim());
+      i += 2; // skip separator row
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].trim().startsWith("|")) {
+        rows.push(lines[i].trim().slice(1, -1).split("|").map((c) => c.trim()));
+        i++;
+      }
+      elements.push(
+        <div key={i} className="my-2 overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                {headerCells.map((h, hi) => (
+                  <th key={hi} className="text-left py-1.5 px-3 bg-muted/50 font-semibold border-b border-border first:rounded-tl-lg last:rounded-tr-lg">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} className="border-b border-border/50 last:border-0">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="py-1.5 px-3">{renderInline(cell)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Regular line
+    if (line.trim() !== "") {
+      elements.push(
+        <p key={i} className="mt-2 first:mt-0 whitespace-pre-wrap">
+          {renderInline(line)}
+        </p>
+      );
+    }
+    i++;
+  }
+
+  return <>{elements}</>;
 }
 
 export function MessageBubble({ role, content }: MessageBubbleProps) {
@@ -45,21 +113,18 @@ export function MessageBubble({ role, content }: MessageBubbleProps) {
         
         <div className={cn(
           "px-5 py-3.5 text-[15px] leading-relaxed shadow-sm",
-          isUser 
-            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm shadow-primary/20 font-medium" 
+          isUser
+            ? "bg-primary text-primary-foreground rounded-2xl rounded-br-sm shadow-primary/20 font-medium"
             : "bg-white border border-border text-foreground rounded-2xl rounded-bl-sm"
         )}>
-          {/* Simple markdown parsing for bold text */}
-          {content.split('\n').map((line, i) => (
-            <p key={i} className={cn(i > 0 && "mt-2", "whitespace-pre-wrap")}>
-              {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                  return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
-                }
-                return part;
-              })}
-            </p>
-          ))}
+          {content === "__pricing_loading__" ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm animate-pulse">Researching market rates in your area…</span>
+            </div>
+          ) : (
+            renderContent(content)
+          )}
         </div>
         
         <span className={cn(

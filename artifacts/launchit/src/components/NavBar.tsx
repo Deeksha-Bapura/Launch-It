@@ -136,12 +136,20 @@ export function NavBar() {
 
           <div className="flex items-center gap-2">
             {!isLoading && !user && (
-              <Link
-                href="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm bg-primary text-white hover:-translate-y-0.5 transition-all shadow-md shadow-primary/20 hover:shadow-lg"
-              >
-                Sign In
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm border border-primary text-primary hover:-translate-y-0.5 transition-all hover:bg-primary/5"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm bg-primary text-white hover:-translate-y-0.5 transition-all shadow-md shadow-primary/20 hover:shadow-lg"
+                >
+                  Sign Up
+                </Link>
+              </>
             )}
             {!isLoading && user && <AvatarDropdown />}
           </div>

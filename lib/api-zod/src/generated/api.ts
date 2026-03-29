@@ -32,6 +32,7 @@ export const SendMessageResponse = zod.object({
   reply: zod.string(),
   detectedBusinessType: zod.string(),
   suggestDocuments: zod.boolean(),
+  detectedState: zod.string().optional(),
 });
 
 /**

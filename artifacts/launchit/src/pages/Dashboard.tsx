@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/context/AuthContext";
-import { FileText, MessageSquare, DollarSign, BarChart3, CheckSquare, Share2, Calendar, AlertCircle } from "lucide-react";
+import { FileText, MessageSquare, DollarSign, BarChart3, CheckSquare, Share2, Calendar, AlertCircle, Sparkles } from "lucide-react";
 import { differenceInDays, format, parseISO } from "date-fns";
 
 const BASE = "/api";
@@ -27,7 +27,7 @@ const DOC_TYPE_ICONS: Record<string, any> = {
 export default function Dashboard() {
   const { user } = useAuth();
 
-  const city = user?.state?.toLowerCase().includes("tx") || user?.state === "TX" ? "houston" : "houston";
+  const city = user?.state?.toLowerCase().includes("austin") ? "austin" : "houston";
   const daysSince = user?.createdAt
     ? differenceInDays(new Date(), parseISO(user.createdAt))
     : 0;
@@ -63,6 +63,34 @@ export default function Dashboard() {
           </h1>
           <p className="text-muted-foreground mt-1">Here's your business at a glance.</p>
         </div>
+
+        {user && (!user.businessType || !user.state) && (
+          <div className="bg-gradient-to-r from-primary/10 to-blue-50 border border-primary/20 rounded-2xl p-4 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {!user.businessType && !user.state
+                  ? "Help us personalize your experience"
+                  : !user.businessType
+                  ? "What kind of business do you run?"
+                  : "Where are you based?"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {!user.businessType && !user.state
+                  ? "Tell us your business type and state to unlock compliance checklists, pricing analysis, and local insights."
+                  : !user.businessType
+                  ? "Share your business type to get relevant compliance and marketing tips."
+                  : "Add your state to see local permits, deadlines, and compliance requirements."}
+              </p>
+            </div>
+            <Link
+              href="/chat"
+              className="flex-shrink-0 bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors whitespace-nowrap"
+            >
+              Tell us more
+            </Link>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white border border-border rounded-2xl p-4">

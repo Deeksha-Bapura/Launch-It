@@ -4,6 +4,7 @@ import { transactionsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { z } from "zod";
+import type { User } from "@workspace/db/schema";
 
 const router: IRouter = Router();
 
@@ -19,7 +20,7 @@ const createTransactionSchema = z.object({
 
 router.get("/", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const month = req.query.month as string | undefined;
     const type = req.query.type as string | undefined;
 
@@ -44,7 +45,7 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const parsed = createTransactionSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid transaction data" });
@@ -63,7 +64,7 @@ router.post("/", async (req, res, next) => {
 
 router.delete("/:id", async (req, res, next) => {
   try {
-    const userId = req.session!.userId!;
+    const userId = (req.user as User).id;
     const id = Number(req.params.id);
     await db
       .delete(transactionsTable)
