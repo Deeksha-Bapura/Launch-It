@@ -5,7 +5,7 @@ import { ClipboardList, ArrowLeft, FileText, BarChart3, DollarSign, Share2, X, P
 import { Layout } from "@/components/Layout";
 import { format, parseISO } from "date-fns";
 
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
 
 interface DbDocument {
   id: number;

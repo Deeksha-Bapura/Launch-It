@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Trash2, TrendingUp, TrendingDown, DollarSign, Plus } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
 
 interface Transaction {
   id: number;

@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { FileText, MessageSquare, DollarSign, BarChart3, CheckSquare, Share2, Calendar, AlertCircle, Sparkles } from "lucide-react";
 import { differenceInDays, format, parseISO } from "date-fns";
 
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
 
 function fetchDocuments() {
   return fetch(`${BASE}/documents`, { credentials: "include" }).then((r) => r.json());
