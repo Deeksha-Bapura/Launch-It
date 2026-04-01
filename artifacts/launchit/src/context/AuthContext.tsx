@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   const refetchUser = useCallback(async () => {
-    setIsLoading(true);
+    //setIsLoading(true);
     await fetchUser();
   }, [fetchUser]);
 

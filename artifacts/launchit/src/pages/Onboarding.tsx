@@ -30,11 +30,14 @@ export default function Onboarding() {
   const [error, setError] = useState("");
 
   const saveStep1 = async () => {
+    console.log("saveStep1 called", { businessName, state });
     if (!businessName.trim() || !state) {
       setError("Please fill in all fields.");
+      console.log("Validation failed");
       return;
     }
     setError("");
+    console.log("Validation passed, calling API");
     setIsLoading(true);
     try {
       const res = await fetch(`${getApiBase()}/auth/me`, {
@@ -43,9 +46,11 @@ export default function Onboarding() {
         credentials: "include",
         body: JSON.stringify({ businessName: businessName.trim(), state }),
       });
+      console.log("API response status:", res.status);
       if (!res.ok) throw new Error("Failed to save");
       setStep(2);
-    } catch {
+    } catch (err) {
+      console.error("API error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -53,11 +58,14 @@ export default function Onboarding() {
   };
 
   const saveStep2 = async () => {
+    console.log("saveStep2 called", { businessDescription });
     if (!businessDescription.trim()) {
       setError("Please add a short description.");
+      console.log("Validation failed");
       return;
     }
     setError("");
+    console.log("Validation passed, calling API");
     setIsLoading(true);
     try {
       const res = await fetch(`${getApiBase()}/auth/me`, {
@@ -66,10 +74,12 @@ export default function Onboarding() {
         credentials: "include",
         body: JSON.stringify({ businessDescription: businessDescription.trim() }),
       });
+      console.log("API response status:", res.status);
       if (!res.ok) throw new Error("Failed to save");
       await refetchUser();
       setStep(3);
-    } catch {
+    } catch (err) {
+      console.error("API error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
