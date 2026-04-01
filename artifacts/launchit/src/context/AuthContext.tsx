@@ -31,6 +31,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function getApiBase() {
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`;
+  }
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   return `${base}/api`;
 }
