@@ -4,6 +4,9 @@ import { Rocket, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 function getApiBase() {
+  if (import.meta.env.VITE_API_URL) {
+    return `${import.meta.env.VITE_API_URL}/api`;
+  }
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   return `${base}/api`;
 }
