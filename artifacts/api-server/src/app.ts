@@ -22,6 +22,7 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
 const sessionSecret = process.env.SESSION_SECRET ?? "launchit-dev-only-secret";
 
 const app: Express = express();
+app.set("trust proxy", 1);
 
 app.use(
   pinoHttp({
