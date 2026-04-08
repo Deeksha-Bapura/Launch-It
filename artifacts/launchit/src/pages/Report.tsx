@@ -15,7 +15,7 @@ import {
 import { TrendingUp, TrendingDown, DollarSign, Printer } from "lucide-react";
 import { format, parseISO, startOfWeek, endOfWeek, eachWeekOfInterval, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
-const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
+const BASE = "https://launch-it-cnhy.onrender.com/api";
 
 interface Transaction {
   id: number;

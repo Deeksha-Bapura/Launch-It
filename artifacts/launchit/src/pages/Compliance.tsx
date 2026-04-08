@@ -6,7 +6,7 @@ import { CheckSquare, Square, AlertCircle, ExternalLink, MapPin, Loader2, Clock 
 import { Link } from "wouter";
 import { differenceInDays, parseISO, format } from "date-fns";
 
-const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
+const BASE = "https://launch-it-cnhy.onrender.com/api";
 
 // Generic static permit checklist that applies nationwide
 const GENERIC_PERMITS = [

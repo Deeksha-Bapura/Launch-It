@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Copy, Instagram, Facebook, Twitter, Youtube, Linkedin } from "lucide-react";
 
-const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api";
+const BASE = "https://launch-it-cnhy.onrender.com/api";
 
 const PLATFORM_ICONS: Record<string, any> = {
   instagram: Instagram,
