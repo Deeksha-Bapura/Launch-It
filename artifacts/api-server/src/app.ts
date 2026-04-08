@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import "./lib/types.js";
 import express, { type Express } from "express";
 import cors from "cors";
@@ -124,5 +126,14 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/api", router);
+
+if (process.env.NODE_ENV === "production") {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const frontendDist = path.resolve(__dirname, "../../../artifacts/launchit/dist/public");
+  app.use(express.static(frontendDist));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
 
 export default app;
