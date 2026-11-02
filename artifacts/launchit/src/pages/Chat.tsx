@@ -195,7 +195,7 @@ export default function Chat() {
         const thinkingMsg = { role: "assistant" as const, content: "__pricing_loading__" };
         setMessages((prev) => [...prev, thinkingMsg]);
 
-        const res = await fetch("/api/documents/pricing-analysis", {
+        const res = await fetch(`${BASE}/documents/pricing-analysis`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
