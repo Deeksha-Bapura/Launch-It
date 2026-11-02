@@ -137,6 +137,10 @@ Never give legal advice. Give guidance and information only. When discussing per
 `;
 
 export async function chat(conversationHistory: Array<{ role: string; content: string }>): Promise<string> {
+  // Used by automated tests so they don't call Claude (no cost, same answer every time)
+  if (process.env.MOCK_AI === "1") {
+    return "Mock reply: thanks! Let's get your home bakery set up.";
+  }
   const response = await getClient().messages.create({
     model: 'claude-opus-4-5',
     max_tokens: 1024,

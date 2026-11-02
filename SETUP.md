@@ -46,10 +46,10 @@ if (process.env.MOCK_AI === "1") {
 (Match the return shape your function already uses.)
 
 **e. Stop hardcoding the backend URL.** In the 9 pages that have
-`const BASE = "https://launch-it-cnhy.onrender.com/api";` change it to:
+`const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "https://launch-it-cnhy.onrender.com/api";` change it to:
 
 ```ts
-const BASE = import.meta.env.VITE_API_URL ?? "https://launch-it-cnhy.onrender.com/api";
+const BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "https://launch-it-cnhy.onrender.com/api";
 ```
 Without this, the Playwright test would sign up fake users on your **live** site.
 (Better still: put it in one `src/lib/api.ts` and import it everywhere.)
