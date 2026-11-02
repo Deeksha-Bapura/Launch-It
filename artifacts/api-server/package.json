@@ -37,6 +37,8 @@
     "@types/express-session": "^1.18.2",
     "@types/jest": "^30.0.0",
     "@types/node": "catalog:",
+    "@types/passport": "^1.0.17",
+    "@types/passport-local": "^1.0.38",
     "@types/supertest": "^7.2.1",
     "esbuild": "^0.27.3",
     "esbuild-plugin-pino": "^2.3.3",

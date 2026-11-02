@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { chat } from "../services/claudeService.js";
 import type { User } from "@workspace/db/schema";
+import { extractJson } from "../lib/parseClaudeJson.js";
 
 const router: IRouter = Router();
 
@@ -98,11 +99,8 @@ Only return the JSON object, nothing else.`;
 
     const raw = await chat([{ role: "user", content: prompt }]);
 
-    let analysis: Record<string, unknown>;
-    try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-    } catch {
+    const analysis = extractJson(raw);
+    if (!analysis) {
       res.status(500).json({ error: "Failed to parse pricing analysis" });
       return;
     }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { parseClaudeJson } from "../lib/parseClaudeJson";
+import { parseClaudeJson, extractJson } from "../lib/parseClaudeJson";
 
 const defaults = { title: "Untitled", items: [] as string[] };
 
@@ -31,13 +31,29 @@ describe("parseClaudeJson", () => {
     ["broken JSON", '{"title": "oops",}'],
     ["truncated JSON", '{"title": "cut off'],
     ["a JSON array", '[1,2,3]'],
-  ])("returns defaults for %s", (_label, raw) => {
-    expect(parseClaudeJson(raw as string, defaults)).toEqual(defaults);
+  ])("returns defaults for %s", (_label: string, raw: string | null | undefined) => {
+    expect(parseClaudeJson(raw, defaults)).toEqual(defaults);
   });
 
   it("does not mutate the defaults object", () => {
     const d = { title: "x" };
     parseClaudeJson('{"title":"y"}', d);
     expect(d.title).toBe("x");
+  });
+});
+
+describe("extractJson", () => {
+  it("returns the object from a reply with extra text", () => {
+    expect(extractJson('Here:\n{"captions":[{"text":"hi"}]}\nEnjoy!'))
+      .toEqual({ captions: [{ text: "hi" }] });
+  });
+
+  it.each([
+    ["empty string", ""],
+    ["no JSON", "Sorry, I can't do that."],
+    ["broken JSON", '{"days": [}'],
+    ["only an opening brace", "{ oops"],
+  ])("returns null for %s", (_label: string, raw: string) => {
+    expect(extractJson(raw)).toBeNull();
   });
 });
