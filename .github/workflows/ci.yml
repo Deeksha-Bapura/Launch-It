@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: launchit
+          POSTGRES_PASSWORD: launchit
+          POSTGRES_DB: launchit_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U launchit"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://launchit:launchit@localhost:5432/launchit_test
+      SESSION_SECRET: ci-only-secret
+      MOCK_AI: "1"
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Create tables in the empty test database.
+      # TODO: use your real schema command (e.g. the db package's "push" script).
+      - name: Create database schema
+        run: pnpm --filter ./lib/db run push
+
+      - name: Type check
+        run: pnpm -r run typecheck --if-present
+
+      - name: Unit + API tests (Jest + Supertest)
+        run: pnpm --filter ./artifacts/api-server test
+
+      - name: Install Playwright browser
+        run: pnpm --filter ./artifacts/launchit exec playwright install --with-deps chromium
+
+      - name: End-to-end test (Playwright)
+        run: pnpm --filter ./artifacts/launchit exec playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: artifacts/launchit/playwright-report
+
+  deploy:
+    needs: test                     # only runs if every test passed
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy backend on Render
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
+      - name: Deploy frontend on Render
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WEB }}"
