@@ -21,6 +21,11 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === "production") {
 
 const sessionSecret = process.env.SESSION_SECRET ?? "launchit-dev-only-secret";
 
+// Tests and local dev run on plain http, so the cookie can't be "secure" there.
+// Everywhere else (Render) keeps the secure cross-site cookie.
+const nodeEnv = (process.env.NODE_ENV ?? "").trim();
+const isLocal = nodeEnv === "test" || nodeEnv === "development";
+
 const app: Express = express();
 app.set("trust proxy", 1);
 
@@ -79,8 +84,8 @@ app.use(
     cookie: {
       maxAge: 30 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: !isLocal,
+      sameSite: isLocal ? "lax" : "none",
     },
   })
 );

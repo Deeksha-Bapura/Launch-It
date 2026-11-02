@@ -3,6 +3,7 @@ import { permitData } from "../services/permitData.js";
 import { GetComplianceDeadlinesResponse, GetPermitsResponse } from "@workspace/api-zod";
 import { chat } from "../services/claudeService.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
+import { extractJson } from "../lib/parseClaudeJson.js";
 
 const router: IRouter = Router();
 
@@ -170,11 +171,8 @@ Include 4-6 items covering: business licenses, state tax registration, any indus
 
     const raw = await chat([{ role: "user", content: prompt }]);
 
-    let guide: Record<string, unknown>;
-    try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      guide = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
-    } catch {
+    const guide = extractJson(raw);
+    if (!guide) {
       res.status(500).json({ error: "Failed to parse compliance guide" });
       return;
     }

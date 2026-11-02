@@ -104,61 +104,25 @@ export const permitData: Record<string, any> = {
   },
 };
 
+// Each keyword must appear at the start of a word, so "tree" matches
+// "trees" but not "street", and "dress" matches "dresses" but not "address".
+const BUSINESS_CATEGORIES: [string, string[]][] = [
+  ["food", ["cake", "cupcake", "bak", "cookie", "tamale", "taco", "food", "seafood", "cook", "meal", "jam", "candy", "snack", "catering"]],
+  ["beauty", ["hair", "nail", "lash", "eyelash", "braid", "beauty", "makeup", "esthetic", "salon", "barber", "wax", "facial"]],
+  ["cleaning", ["clean", "maid", "housekeep", "janitor", "laundry"]],
+  ["landscaping", ["lawn", "yard", "landscap", "mow", "tree", "garden"]],
+  ["apparel", ["cloth", "apparel", "fashion", "shirt", "dress", "sew"]],
+  ["education", ["tutor", "teach", "lesson", "coach", "educat", "class"]],
+  ["repair", ["repair", "fix", "mechanic", "handyman", "plumb", "electric"]],
+  ["retail", ["sell", "resell", "retail", "resale", "shop", "store", "product"]],
+];
+
 export function classifyBusiness(description: string): string {
   const lower = description.toLowerCase();
-
-  if (
-    lower.includes('cake') || lower.includes('bak') || lower.includes('cookie') ||
-    lower.includes('tamale') || lower.includes('taco') || lower.includes('food') ||
-    lower.includes('cook') || lower.includes('meal') || lower.includes('jam') ||
-    lower.includes('candy') || lower.includes('snack') || lower.includes('catering')
-  ) {
-    return 'food';
+  for (const [category, keywords] of BUSINESS_CATEGORIES) {
+    if (keywords.some((k) => new RegExp(`\\b${k}`).test(lower))) {
+      return category;
+    }
   }
-  if (
-    lower.includes('hair') || lower.includes('nail') || lower.includes('lash') ||
-    lower.includes('braid') || lower.includes('beauty') || lower.includes('makeup') ||
-    lower.includes('esthetic') || lower.includes('salon') || lower.includes('barber') ||
-    lower.includes('wax') || lower.includes('facial')
-  ) {
-    return 'beauty';
-  }
-  if (
-    lower.includes('clean') || lower.includes('maid') || lower.includes('housekeep') ||
-    lower.includes('janitor') || lower.includes('laundry')
-  ) {
-    return 'cleaning';
-  }
-  if (
-    lower.includes('lawn') || lower.includes('yard') || lower.includes('landscap') ||
-    lower.includes('mow') || lower.includes('tree') || lower.includes('garden')
-  ) {
-    return 'landscaping';
-  }
-  if (
-    lower.includes('cloth') || lower.includes('apparel') || lower.includes('fashion') ||
-    lower.includes('shirt') || lower.includes('dress') || lower.includes('sew')
-  ) {
-    return 'apparel';
-  }
-  if (
-    lower.includes('tutor') || lower.includes('teach') || lower.includes('lesson') ||
-    lower.includes('coach') || lower.includes('educat') || lower.includes('class')
-  ) {
-    return 'education';
-  }
-  if (
-    lower.includes('repair') || lower.includes('fix') || lower.includes('mechanic') ||
-    lower.includes('handyman') || lower.includes('plumb') || lower.includes('electric')
-  ) {
-    return 'repair';
-  }
-  if (
-    lower.includes('sell') || lower.includes('retail') || lower.includes('resale') ||
-    lower.includes('shop') || lower.includes('store') || lower.includes('product')
-  ) {
-    return 'retail';
-  }
-
-  return 'general';
+  return "general";
 }

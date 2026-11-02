@@ -57,3 +57,5 @@ source.tar.gz
 source.tar.gz
 *.tar.gz
 .vercel
+test-results/
+playwright-report/

@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { chat } from "../services/claudeService.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 import { z } from "zod";
+import { extractJson } from "../lib/parseClaudeJson.js";
 
 const router: IRouter = Router();
 
@@ -51,12 +52,9 @@ Return a JSON object with this exact structure:
 Each caption should be 1-3 sentences, engaging, and authentic. Each caption gets 5-8 relevant hashtags (without the # symbol). Return only valid JSON.`;
 
     const rawReply = await chat([{ role: "user", content: prompt }]);
-    let captions;
-    try {
-      const match = rawReply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : rawReply);
-      captions = parsed.captions;
-    } catch {
+    const captionsJson = extractJson(rawReply);
+    let captions = captionsJson?.captions;
+    if (!Array.isArray(captions)) {
       captions = [
         { text: rawReply, hashtags: ["smallbusiness", "entrepreneur", "hustle"] }
       ];
@@ -89,12 +87,9 @@ Return a JSON object with this exact structure:
 For icon, use one of: "instagram", "facebook", "twitter", "tiktok", "youtube", "linkedin", "pinterest". Return only valid JSON.`;
 
     const rawReply = await chat([{ role: "user", content: prompt }]);
-    let platforms;
-    try {
-      const match = rawReply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : rawReply);
-      platforms = parsed.platforms;
-    } catch {
+    const platformsJson = extractJson(rawReply);
+    let platforms = platformsJson?.platforms;
+    if (!Array.isArray(platforms)) {
       platforms = [
         { name: "Instagram", reason: "Great for visual businesses", icon: "instagram", tips: ["Post consistently", "Use Stories"] },
         { name: "Facebook", reason: "Broad audience reach", icon: "facebook", tips: ["Join local groups", "Boost posts"] }
@@ -133,12 +128,9 @@ Return a JSON object with this exact structure:
 Make content ideas specific and actionable. Return only valid JSON.`;
 
     const rawReply = await chat([{ role: "user", content: prompt }]);
-    let days;
-    try {
-      const match = rawReply.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(match ? match[0] : rawReply);
-      days = parsed.days;
-    } catch {
+    const daysJson = extractJson(rawReply);
+    let days = daysJson?.days;
+    if (!Array.isArray(days)) {
       const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
       days = weekDays.map((day) => ({
         day,
